@@ -1,0 +1,943 @@
+<h3 class="text-lg font-bold mb-4">Legal</h3> // these are mocks links
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-all">Terms of Service</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-all">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-all">Cookie Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-all">GDPR Compliance</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+              // All right reserved is a mock link 
+                <p class="text-gray-400">© 2023 ChemConnect. All rights reserved.</p>
+                <div class="mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-white transition-all mr-4">Terms</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-all mr-4">Privacy</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-all">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // FAQ accordion
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const answer = button.nextElementSibling;
+                const icon = button.querySelector('i');
+                
+                // Toggle answer visibility
+                answer.classList.toggle('hidden');
+                
+                // Rotate icon
+                icon.classList.toggle('rotate-180');
+                
+                // Close other open answers in the same FAQ section
+                const parentItem = button.parentElement;
+                document.querySelectorAll('.faq-item').forEach(item => {
+                    if (item !== parentItem) {
+                        item.querySelector('.faq-answer').classList.add('hidden');
+                        item.querySelector('.faq-question i').classList.remove('rotate-180');
+                    }
+                });
+            });
+        });
+
+        // Request form submission handling
+        document.getElementById('requestForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            
+            if (!currentUser) {
+                alert('Please log in to submit a request.');
+                return;
+            }
+
+            const requestData = {
+                id: Date.now(), // Unique ID for the request
+              //these data are stored locally
+                userId: currentUser.id,
+                collegeName: document.getElementById('collegeName').value,
+                contactPerson: document.getElementById('contactPerson').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                itemType: document.getElementById('itemType').value,
+                itemDetails: document.getElementById('itemDetails').value,
+                urgency: document.getElementById('urgency').value,
+                timestamp: new Date().toISOString()
+            };
+
+            let userRequests = JSON.parse(localStorage.getItem(chemconnect_requests_${currentUser.id}) || '[]');
+            userRequests.push(requestData);
+            localStorage.setItem(chemconnect_requests_${currentUser.id}, JSON.stringify(userRequests));
+
+            // Show success message
+            document.getElementById('requestSuccess').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('requestSuccess').classList.add('hidden');
+            }, 5000);// when user submits the form he gets result that he will be contacted in few days 
+            
+            // Reset form
+            this.reset();
+            loadProfileData(); // Refresh profile data
+        });
+
+        // Supply form submission handling
+        document.getElementById('supplyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                alert('Please log in to list an item for supply.');
+                return;
+            }
+
+            const supplyData = {
+                id: Date.now(), // Unique ID for the supply item  // these data are stored locally
+                userId: currentUser.id,
+                collegeName: document.getElementById('supplyCollegeName').value,
+                contactPerson: document.getElementById('supplyContactPerson').value,
+                email: document.getElementById('supplyEmail').value,
+                phone: document.getElementById('supplyPhone').value,
+                itemType: document.getElementById('supplyItemType').value,
+                itemDetails: document.getElementById('supplyItemDetails').value,
+                price: document.getElementById('supplyPrice').value || "FREE",
+                location: document.getElementById('supplyLocation').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Store supplier contact info  // this info about contact supplier is visible below the available items in the search section
+            let storedSuppliers = JSON.parse(localStorage.getItem('chemconnect_suppliers') || '{}');
+            storedSuppliers[supplyData.collegeName] = {
+                name: supplyData.collegeName,
+                contactPerson: supplyData.contactPerson,
+                email: supplyData.email,
+                phone: supplyData.phone,
+                address: supplyData.location
+            };
+            localStorage.setItem('chemconnect_suppliers', JSON.stringify(storedSuppliers));
+
+            let userSupplies = JSON.parse(localStorage.getItem(chemconnect_supplies_${currentUser.id}) || '[]');
+            userSupplies.push(supplyData);
+            localStorage.setItem(chemconnect_supplies_${currentUser.id}, JSON.stringify(userSupplies));
+
+            // Also add to the general search results (dynamicItemsContainer)
+            // This part is already handled by the existing code, just ensure it uses the new supplyData
+            const newItem = document.createElement('div');
+            newItem.className = 'bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200 mt-6';
+            newItem.setAttribute('data-item-type', supplyData.itemType); // Add data attribute for filtering
+            newItem.setAttribute('data-supplier', supplyData.collegeName); // Add data attribute for supplier
+            newItem.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">${supplyData.itemDetails}</h3>
+                        <p class="text-gray-600">${supplyData.itemType.charAt(0).toUpperCase() + supplyData.itemType.slice(1)} in ${supplyData.location}</p>
+                    </div>
+                    <div class="mt-2 md:mt-0 text-right">
+                        <span class="text-lg font-bold ${supplyData.price === 'FREE' ? 'text-green-600' : 'text-green-600'}">${supplyData.price === 'FREE' ? 'FREE' : '₹'+supplyData.price}</span>
+                        <p class="text-sm text-gray-500">${supplyData.collegeName}</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">${supplyData.itemType.charAt(0).toUpperCase() + supplyData.itemType.slice(1)}</span>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">Available</span>
+                </div>
+                <a href="supplier_contact.html?supplier=${encodeURIComponent(supplyData.collegeName)}&item=${encodeURIComponent(supplyData.itemDetails)}" class="mt-4 text-blue-600 hover:text-blue-800 font-medium">Contact Supplier</a>
+            `; // this provide basic info about supplier
+
+            // Add to the dynamic items container // Using prepend to ensure the latest item appears in the list
+            document.getElementById('dynamicItemsContainer').prepend(newItem);
+            
+            // Show success message
+            document.getElementById('supplySuccess').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('supplySuccess').classList.add('hidden');
+            }, 5000);
+            
+            // Reset form
+            this.reset();
+            performSearch(); // Re-run search to include the new item in the visible list if filters match
+            loadProfileData(); // Refresh profile data
+        });
+
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('contactSuccess').classList.remove('hidden');
+            this.reset();
+            setTimeout(() => {
+                document.getElementById('contactSuccess').classList.add('hidden');
+            }, 5000);
+            return false;
+        });
+
+        // --- Search Functionality ---
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const searchResultsContainer = document.getElementById('searchResults'); // This is the parent of all item divs
+        const filterButtons = document.querySelectorAll('.search-filter');
+        const loadMoreButton = document.getElementById('loadMoreButton');  // this is a mock link
+
+        // Function to perform search and filter
+      // Helps user to search available items according to his needs
+        function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            let selectedType = null;
+
+            // Determine the active filter type
+            filterButtons.forEach(button => {
+                if (button.classList.contains('active-chemical') ||
+                    button.classList.contains('active-equipment') ||
+                    button.classList.contains('active-glassware') ||
+                    button.classList.contains('active-other')) {
+                    selectedType = button.getAttribute('data-type');
+                }
+            });
+
+            // Iterate over all direct children of searchResultsContainer (static items + dynamicItemsContainer)
+            // and then over children of dynamicItemsContainer
+            const allItems = Array.from(searchResultsContainer.children).flatMap(child => {
+                if (child.id === 'dynamicItemsContainer') {
+                    return Array.from(child.children);
+                }
+                return [child];
+            }).filter(item => item.nodeType === 1); // Ensure it's an element node
+           // show results on the basis of the input by user 
+            allItems.forEach(item => {
+                const itemText = item.textContent.toLowerCase();
+                const itemType = item.getAttribute('data-item-type');
+
+                const matchesQuery = itemText.includes(query);
+                const matchesType = selectedType ? (itemType === selectedType) : true;
+
+                if (matchesQuery && matchesType) {
+                    item.style.display = ''; // Show the item
+                } else {
+                    item.style.display = 'none'; // Hide the item
+                }
+            });
+        }
+
+        // Event Listeners for Search Bar
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+            // Also perform search on every key stroke for live filtering
+            performSearch();
+        });
+
+        // Event Listeners for Filter Buttons
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const type = this.getAttribute('data-type');
+                let isActive = false;
+
+                // Check if this button is already active
+                if (this.classList.contains(active-${type})) {
+                    isActive = true;
+                }
+
+                // Remove all active classes from all filter buttons
+                filterButtons.forEach(btn => {
+                    btn.classList.remove('active-chemical', 'active-equipment', 'active-glassware', 'active-other');
+                    // Reset to default Tailwind colors
+                  // This ensures all buttons return to a neutral (unselected) appearance before applying any new selection
+                    const btnType = btn.getAttribute('data-type');
+                    if (btnType === 'chemical') btn.classList.replace('bg-blue-600', 'bg-blue-100');
+                    else if (btnType === 'equipment') btn.classList.replace('bg-green-600', 'bg-green-100');
+                    else if (btnType === 'glassware') btn.classList.replace('bg-purple-600', 'bg-purple-100');
+                    else if (btnType === 'other') btn.classList.replace('bg-yellow-600', 'bg-yellow-100');
+                    btn.classList.remove('text-white');
+                    if (btnType === 'chemical') btn.classList.add('text-blue-700');
+                    else if (btnType === 'equipment') btn.classList.add('text-green-700');
+                    else if (btnType === 'glassware') btn.classList.add('text-purple-700');
+                    else if (btnType === 'other') btn.classList.add('text-yellow-700');
+                });
+
+                // If the button was not active, it commands to active the button
+                if (!isActive) {
+                    this.classList.add(active-${type});
+                    // Apply specific active color
+                    if (type === 'chemical') this.classList.replace('bg-blue-100', 'bg-blue-600');
+                    else if (type === 'equipment') this.classList.replace('bg-green-100', 'bg-green-600');
+                    else if (type === 'glassware') this.classList.replace('bg-purple-100', 'bg-purple-600');
+                    else if (type === 'other') this.classList.replace('bg-yellow-100', 'bg-yellow-600');
+                    this.classList.add('text-white');
+                }
+
+                performSearch(); // Re-run search with new filter state
+            });
+        });
+
+        // Load More Results (mock functionality)
+        loadMoreButton.addEventListener('click', function() {
+            alert('In a real application, more results would be loaded from a server.');
+            // For demonstration, you could add more static items here or generate them
+            // For now, it just alerts.
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close mobile menu if open
+                    const mobileMenu = document.getElementById('mobile-menu');
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        // Initial search to ensure all items are visible by default
+        performSearch();
+
+    </script>   
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemConnect Assistant</title> // it is a Ai bot which is maked by pre defined QnAs
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Chatbot Container */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Chat Toggle Button */
+        .chat-toggle {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4); }
+            50% { box-shadow: 0 6px 25px rgba(0, 123, 255, 0.6); }
+            100% { box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4); }
+        }
+
+        .chat-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.5);
+            animation: none;
+        }
+
+        .chat-toggle svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+
+        /* Chat Window */
+      /* show all the types of question already set in the bot */
+        .chat-window {
+            position: absolute;
+            bottom: 85px;
+            right: 0;
+            width: 380px;
+            height: 520px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .chat-window.active {
+            display: flex;
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chat-header p {
+            margin: 5px 0 0 0;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .close-chat {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .close-chat:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .message.user .message-content {
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            max-width: 85%;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #007bff;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Input Area */
+        .chat-input-area {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+
+        .send-button {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            min-width: 45px;
+            height: 45px;
+        }
+
+        .send-button:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Quick Options */
+        .quick-options {
+            padding: 15px 20px 0;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quick-options-title {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .quick-option {
+            background: white;
+            border: 1px solid #e9ecef;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.2s ease;
+            color: #495057;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-option:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .quick-option:active {
+            transform: translateY(0);
+        }
+
+        /* Welcome Message is a pre defined which is shown everytime when user open the chat bot */
+        .welcome-message {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 14px;
+            border-radius: 12px;
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .welcome-message strong {
+            color: #007bff;
+        }
+
+        /* Scrollbar */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive */ 
+      /*  This bot is not integrated with AI – it only handles predefined questions and returns nothing for others  */
+        @media (max-width: 420px) {
+            .chat-window {
+                width: 95vw;
+                height: 80vh;
+                bottom: 80px;
+                right: 2.5vw;
+            }
+            
+            .chatbot-container {
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+
+        /* Utility Classes */
+        .text-primary { color: #007bff; }
+        .text-success { color: #28a745; }
+        .text-warning { color: #ffc107; }
+        .fw-bold { font-weight: 600; }
+        .small { font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <!-- Chat Toggle Button -->
+      <!-- When clicked, this button triggers the toggleChat() function to show or hide the chatbot window -->
+        <button class="chat-toggle" onclick="toggleChat()">
+            <svg viewBox="0 0 24 24">
+                <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4C0,2.89 21.11,2 20,2M6,9H18V11H6V9M6,6H18V8H6V6M6,12H15V14H6V12Z"/>
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <h3>ChemConnect Assistant</h3>
+                <p>Connecting colleges through chemistry 🧪</p>
+                <button class="close-chat" onclick="toggleChat()">×</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <strong>Welcome to ChemConnect!</strong><br>
+                    I'm here to help you understand how colleges connect and exchange surplus chemicals & equipment. Ask me anything! 
+                </div>
+            </div>
+         <!-- below are some pre defined questions for now to increase the engagement on website -->
+            <div class="quick-options">
+                <div class="quick-options-title">FAQ:</div>
+                <div class="quick-option" onclick="handleQuickOption('How does ChemConnect work?')">🔄 How does it work?</div>
+                <div class="quick-option" onclick="handleQuickOption('What can I find here?')">🔍 What's available?</div>
+                <div class="quick-option" onclick="handleQuickOption('How do I join?')">📝 How to join?</div>
+                <div class="quick-option" onclick="handleQuickOption('Is it really free?')">💰 Cost & pricing</div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." onkeypress="handleEnterKey(event)">
+              <!-- Allows user to type messages; triggers send on 'Enter' key -->
+                <button class="send-button" onclick="sendMessage()" id="sendButton">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conversationHistory = [];
+        let isTyping = false;
+
+        // Enhanced responses with context awareness
+        const responses = {
+            // Greetings
+            'hello': 'Hello! 👋 Welcome to ChemConnect. I\'m here to help you understand how our platform connects colleges for sharing surplus chemicals and equipment. What would you like to know?',
+            'hi': 'Hi there! 😊 I can help you learn about ChemConnect - where colleges connect to exchange surplus lab materials. What interests you most?',
+            'hey': 'Hey! 🙌 Ready to learn about how ChemConnect helps colleges share resources? Ask me anything!',
+            // these are some pre defined QnAs which we have set in the bot to answer user if these questions are asked 
+            // Core Platform Questions
+            'how does chemconnect work': 'ChemConnect works through a simple 4-step process:\n\n🔍 *1. Browse or List* - Colleges can browse available items OR list their surplus materials\n\n🤝 *2. Connect* - Our platform matches you with verified colleges that have what you need\n\n💬 *3. Communicate* - You chat directly with the other college to arrange details\n\n📦 *4. Exchange* - Complete the exchange at nominal costs (just operational charges)\n\nIt\'s completely free to use - we just facilitate the connection between colleges! The goal is reducing waste while helping institutions get materials they need.',
+            
+            'what can i find here': 'Colleges share various lab materials on ChemConnect:\n\n🧪 *Chemicals* - ACS reagent grade, unopened containers\n• Currently: Acetone (HBTU Kanpur), various reagents\n\n🔬 *Equipment* - Instruments, analyzers, lab devices\n• Currently: UV-Vis Spectrophotometer (IIT Kanpur)\n\n🥽 *Glassware & Supplies* - Beakers, flasks, test tubes\n• Currently: 25-piece glassware set (PSIT Kanpur)\n\n⚗ *Specialized Materials* - Nanotechnology, material science items\n• Currently: Research materials (IIT Kanpur)\n\nThe inventory changes as colleges add new items and complete exchanges!',
+            
+            'how do i join': 'Joining ChemConnect is straightforward:\n\n📧 *1. Sign Up* - Use your official college email address\n\n🏫 *2. College Verification* - We verify your institution to ensure authenticity\n\n📋 *3. Create Profile* - Set up your college\'s profile with department details\n\n✅ *4. Start Connecting* - Browse available items or list your surplus materials\n\nClick "Sign up today" on the homepage to get started! We only accept verified educational institutions to maintain trust and safety.',
+            
+            'is it really free': 'Yes, ChemConnect is completely free to use! Here\'s how it works:\n\n🆓 *Platform Access* - No fees to join, browse, or list items\n\n💰 *Operational Charges Only* - Small nominal costs for some exchanges (just covers logistics)\n\n📊 *No Hidden Fees* - We don\'t take commissions or charge membership fees\n\n🎯 *Our Goal* - Connect colleges and reduce waste, not make money from exchanges\n\nThe only costs are minimal operational charges that some colleges may request to cover their handling/shipping expenses. Most exchanges happen at very low costs compared to buying new!',
+            
+            // Specific Features
+            'what are the benefits': 'ChemConnect offers amazing benefits for colleges:\n\n💰 *Huge Savings* - Get materials at nominal costs vs. market prices\n• Example: Save ₹50,000+ per semester like Delhi University\n\n🌱 *Reduce Waste* - Give surplus materials new life instead of disposal\n\n🤝 *College Network* - Connect with IITs, NITs, universities across India\n\n📚 *Knowledge Exchange* - Foster collaboration beyond just materials\n\n🔬 *Quality Assured* - ACS reagent grade chemicals, well-maintained equipment\n\n⚡ *Quick Process* - Direct communication between colleges for fast arrangements\n\nIt\'s a win-win: save money while helping other institutions and the environment!',
+            
+            'safety and quality': 'We take safety and quality seriously:\n\n✅ *College Verification* - All institutions are verified before joining\n\n🔬 *Quality Standards* - Items like ACS reagent grade chemicals, well-maintained equipment\n\n📋 *Detailed Descriptions* - All items include condition, specifications, and usage history\n\n💬 *Direct Communication* - Colleges communicate directly about handling and safety requirements\n\n🏫 *Institutional Trust* - Working with established educational institutions\n\n📊 *Transparent Process* - Clear information about each item and supplying college\n\nRemember: You\'re dealing directly with verified colleges, not random sellers!',
+            
+            // Examples and Success Stories
+            'examples': 'Here are some current examples on ChemConnect:\n\n🧪 *Acetone (ACS Reagent Grade)* - Unopened container from HBTU Kanpur\n\n📊 *UV-Vis Spectrophotometer* - Used but well-maintained with cuvette set from IIT Kanpur\n\n🔬 *Glassware Set* - 25 pieces (beakers, flasks, test tubes) from PSIT Kanpur\n\n⚗ *Nanotechnology Materials* - Research materials for material science from IIT Kanpur\n\nSuccess stories:\n• Delhi University saved ₹50,000+ in one semester\n• IIT Bombay helped a smaller college get equipment they couldn\'t afford\n• St. Xavier\'s College built connections with larger institutions',
+            
+            'colleges participating': 'ChemConnect connects various types of institutions:\n\n🏛 *IITs* - Indian Institutes of Technology (like IIT Kanpur, IIT Bombay)\n\n🎓 *Central Universities* - Like Delhi University\n\n🏫 *Private Colleges* - Like St. Xavier\'s College\n\n🔬 *Technical Institutes* - Like HBTU Kanpur, PSIT Kanpur\n\n🌟 *Research Centers* - Various R&D institutions\n\nAll participating colleges are verified to ensure legitimate educational institutions. This creates a trusted network for safe exchanges.',
+            
+            // Process Details
+            'communication process': 'The communication process is simple and direct:\n\n1️⃣ *Find Items* - Browse available materials or search specifically\n\n2️⃣ *Express Interest* - Click to connect with the supplying college\n\n3️⃣ *Direct Chat* - Communicate directly with the other institution\n\n4️⃣ *Arrange Details* - Discuss condition, pickup/delivery, any operational charges\n\n5️⃣ *Complete Exchange* - Finalize the arrangement between colleges\n\nNo middleman - you deal directly with the other college for transparency and trust!',
+            
+            'request vs supply': 'You can both request items you need AND supply surplus items:\n\n📝 *Request Items* - Fill out a form describing what your college needs\n• Gets shared with colleges that might have it\n• Other colleges can reach out if they can help\n\n📦 *Supply Items* - List surplus materials your college has\n• Other colleges can see and request these items\n• You choose who to work with\n\n🔄 *Both Ways* - Most colleges do both - request some items while supplying others\n\nIt\'s a collaborative community where everyone helps everyone!',
+            
+            // Contact and Support
+            'contact support': 'Need help or have questions?\n\n📧 *Contact Form* - Use the contact form on our homepage\n\n❓ *FAQ Section* - Check our FAQ for common questions\n\n💬 *This Assistant* - I can help with most questions about the platform\n\n🏫 *College-to-College* - For specific exchanges, communicate directly with the other college\n\n🔧 *Technical Issues* - Report any platform problems through our contact form\n\nWe\'re here to help make connections between colleges as smooth as possible!',
+            
+            // Default responses based on context
+          // we have set these answers to maintain proper functionality of bot and answers those question which are not set or defined in it
+            'default_first': 'I can help you with information about:\n\n• How ChemConnect works (our 4-step process)\n• What materials are available for exchange\n• How to join as a college\n• Costs and pricing (spoiler: it\'s mostly free!)\n• Safety and quality standards\n• Success stories from other colleges\n• The communication process\n\nWhat would you like to know more about?',
+            
+            'default_followup': 'Is there anything else you\'d like to know about ChemConnect? I can explain more about:\n\n• The exchange process\n• Types of materials available\n• How colleges communicate\n• Safety measures\n• Getting started\n\nJust ask away! 😊'
+        };
+
+        // Context-aware response matching
+        function getSmartResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Direct matches
+            if (responses[lowerMessage]) {
+                return responses[lowerMessage];
+            }
+            
+            // Context-aware matching with multiple keywords
+            // This object maps intent categories to arrays of related keywords.
+            // When the user types a message, we check for matching keywords to determine their intent.
+            // This helps the bot respond accurately even if exact phrases aren't used.
+            const keywords = {
+                'how_work': ['how', 'work', 'process', 'steps', 'operate'],
+                'what_find': ['what', 'find', 'available', 'items', 'materials', 'chemicals', 'equipment'],
+                'join': ['join', 'register', 'sign up', 'signup', 'start', 'begin'],
+                'cost': ['cost', 'price', 'pricing', 'fee', 'money', 'free', 'charge'],
+                'benefits': ['benefit', 'advantage', 'save', 'saving', 'help', 'good'],
+                'safety': ['safety', 'safe', 'quality', 'secure', 'trust', 'verify'],
+                'examples': ['example', 'sample', 'show', 'demonstrate', 'like what'],
+                'colleges': ['college', 'university', 'institution', 'iit', 'nit', 'who'],
+                'communication': ['communicate', 'talk', 'contact', 'reach', 'connect', 'message'],
+                'request_supply': ['request', 'supply', 'list', 'need', 'have', 'surplus'],
+                'contact': ['contact', 'support', 'help', 'assistance', 'problem']
+            };
+            
+            // Count keyword matches
+           // this helps bot to answer those specific questions whose words match with the library stored in bot or keywords store in bot 
+            const scores = {};
+            Object.keys(keywords).forEach(key => {
+                scores[key] = keywords[key].filter(keyword => lowerMessage.includes(keyword)).length;
+            });
+            
+            // Find best match
+            const bestMatch = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+            
+            if (scores[bestMatch] > 0) {
+                switch(bestMatch) {
+                    case 'how_work': return responses['how does chemconnect work'];
+                    case 'what_find': return responses['what can i find here'];
+                    case 'join': return responses['how do i join'];
+                    case 'cost': return responses['is it really free'];
+                    case 'benefits': return responses['what are the benefits'];
+                    case 'safety': return responses['safety and quality'];
+                    case 'examples': return responses['examples'];
+                    case 'colleges': return responses['colleges participating'];
+                    case 'communication': return responses['communication process'];
+                    case 'request_supply': return responses['request vs supply'];
+                    case 'contact': return responses['contact support'];
+                }
+            }
+            
+            // Greeting detection 
+            if (['hi', 'hello', 'hey', 'hiya', 'greetings'].some(greeting => lowerMessage.includes(greeting))) {
+                return responses['hello'];
+            }
+            
+            // Default response based on conversation length
+            return conversationHistory.length < 3 ? responses['default_first'] : responses['default_followup'];
+        }
+        // Toggles the visibility of the chat window
+        function toggleChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.classList.toggle('active');
+            
+            if (chatWindow.classList.contains('active')) {
+                document.getElementById('chatInput').focus();
+            }
+        }
+        // Handles quick reply options (predefined buttons)
+        // Sends the selected message directly
+        function handleQuickOption(message) {
+            sendMessage(message);
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+// Sends the message if Enter is pressed (without Shift for multiline)
+        function sendMessage(predefinedMessage = null) {
+            const input = document.getElementById('chatInput');
+            const message = predefinedMessage || input.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            conversationHistory.push({type: 'user', message: message});
+            
+            // Clear input
+            if (!predefinedMessage) input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Generate response after delay
+          // these ensures that the response is sent without delay
+            setTimeout(() => {
+                hideTypingIndicator();
+                const response = getSmartResponse(message);
+                addMessage(response, 'bot');
+                conversationHistory.push({type: 'bot', message: response});
+            }, 1000 + Math.random() * 1000); // Variable delay for natural feel
+        }
+           // Adds a message to the chat window
+           // Parameters:
+           // - message: The text content of the message
+           // - sender: Specifies the sender ('user' or 'bot'), used for styling purposes
+        function addMessage(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = message ${sender};
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = message.replace(/\n/g, '<br>');
+            
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        //  Displays a "typing" indicator in the chat window for the bot
+        function showTypingIndicator() {
+            if (isTyping) return;
+            isTyping = true;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            
+            const typingContent = document.createElement('div');
+            typingContent.className = 'typing-indicator';
+            typingContent.innerHTML = `
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+                <span class="small text-muted">Assistant is typing...</span>
+            `;
+            
+            typingDiv.appendChild(typingContent); // Add animated dots to the typing message bubble
+            chatMessages.appendChild(typingDiv); // Add the entire typing indicator to the chat messages
+            chatMessages.scrollTop = chatMessages.scrollHeight;// Auto-scroll to the bottom to keep the typing indicator in view
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+            isTyping = false;
+        }
+
+        // Initialize
+        // Initialize Chatbot on Page Load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                addMessage('👋 Hi! I\'m your ChemConnect assistant. I can help you understand how colleges connect to exchange surplus chemicals and equipment. What would you like to know?', 'bot');
+            }, 1500);
+        });
+    </script>
+</body>
+</html> 
+</body>
+</html>
